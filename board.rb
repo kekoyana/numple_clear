@@ -1,8 +1,13 @@
 class Board
+  class RandErr < StandardError; end
   attr_accessor :squares
 
   def strings=(strings)
     @squares = strings.map { _1.split(//) }.flatten.map { Square.init(_1) }
+  end
+
+  def str
+    @squares.map { _1.number || 0 }.join
   end
 
   def yoko
@@ -24,6 +29,18 @@ class Board
   end
 
   def check
+    @org = str.dup
+    loop do
+      begin
+        check_detail
+        break
+      rescue RandErr
+        self.strings = @org.split(//)
+      end
+    end
+  end
+
+  def check_detail
     loop do
       reset_changed
       check_impossible
@@ -31,7 +48,9 @@ class Board
       check_from_num
       next if changed?
       check_possibles
-      break unless changed?
+      next if changed?
+      break if clear?
+      random_choice
     end
   end
 
@@ -91,11 +110,23 @@ class Board
     end
   end
 
+  def random_choice
+    # とりあえず入れられるものを選ぶ
+    square = @squares.reject(&:number).sample
+    rnd = square.possibles.to_a.sample
+    raise RandErr if rnd.nil?
+    square.set_number(rnd)
+  end
+
   def changed?
     @squares.any?(&:changed)
   end
 
   def reset_changed
     @squares.each(&:reset_changed)
+  end
+
+  def clear?
+    @squares.reject(&:number).size == 0
   end
 end
